@@ -23,8 +23,7 @@ aCollectionOfNames add:#specialVar.
 
 { #category : #accessing }
 ParameterSample class >> removeParameters [ 
-"overwritten"
-^#(#var1)
+^#(#var1 #blabla)
 ]
 
 { #category : #initialization }
@@ -64,7 +63,7 @@ ParameterSample >> var2: anObject [
 
 { #category : #accessing }
 ParameterSample >> var3 [
-	^ var3 ifNil: [ ^4 ]
+	^ var3 ifNil: [ ^var3:=4 ]
 ]
 
 { #category : #accessing }

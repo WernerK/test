@@ -14,7 +14,7 @@ TParameter classSide >> manipulateParameters: aCollectionOfNames [
 
 { #category : #accessing }
 TParameter classSide >> removeParameters [ 
-"by default removes nothing. can be overwritten. should be an Array of instance variables"
+"by default removes nothing. can be overwritten. should return an Array of instance variables"
 ^#()
 ]
 
@@ -24,12 +24,34 @@ TParameter >> defaultParameters [
 
 	| names|
 	names := self class allInstVarNames asOrderedCollection . 
-	names removeAll: self class removeParameters.
+	self class removeParameters do: [:each | names remove: each ifAbsent:[] ].
 	names:=self class manipulateParameters:names.
 	names := names reject: [ :n | 
 			(self class lookupSelector: n , ':') isNil or:[
 				(self class lookupSelector: n) isNil] ].
 	^ names asArray
+]
+
+{ #category : #accessing }
+TParameter >> isValidParameter: aDictionary [
+	| d |
+"method returns a Dictionary, if aDictionary is a valid parameter. the second line with its transformation exists, because i find Dictionarys difficult to use interactively, Arrays are faster to write"
+	aDictionary isCollection ifFalse: [ ^TypeError type:'collection' ].
+	d := aDictionary isSequenceable
+		ifTrue: [ (aDictionary allSatisfy: [ :a|a class == Association])
+				ifTrue: [ aDictionary asDictionary ]
+				ifFalse: [ aDictionary size even 
+					ifTrue: [Dictionary newFromPairs: aDictionary] 
+					ifFalse:[aDictionary] ] ]
+		ifFalse: [ aDictionary ]. 
+	d isDictionary ifFalse: [ ^ TypeError
+				type: 'Dictionary or Array of pairs or of Associations' ].
+	d keysDo: [ :k | self defaultParameters
+				detect: [ :x | x = k ]
+				ifNone: [ ^ TypeError 
+					signal: 'Argument of #parameter: has an invalid key: ', k asString ] ].
+	d ifEmpty: [ ^ CollectionIsEmpty signalWith: d ].
+	^d
 ]
 
 { #category : #accessing }
@@ -43,21 +65,7 @@ TParameter >> parameter [
 
 { #category : #accessing }
 TParameter >> parameter: aDictionary [
-	| d |
-"the first line with its transformation exists, because i find Dictionarys difficult to use interactively, Arrays are faster to write"
-	d := aDictionary isSequenceable
-		ifTrue: [ aDictionary first class == Association
-				ifTrue: [ aDictionary asDictionary ]
-				ifFalse: [ Dictionary newFromPairs: aDictionary ] ]
-		ifFalse: [ aDictionary ]. 
-	d isDictionary ifFalse: [ ^ TypeError
-				type: 'Dictionary or Array of pairs or of Associations' ].
-	d keysDo: [ :k | self defaultParameters
-				detect: [ :x | x = k ]
-				ifNone: [ ^ TypeError 
-					signal: 'Argument of #parameter: has an invalid key: ', k asString ] ].
-	d ifEmpty: [ ^ CollectionIsEmpty signalWith: d ].
-"All this was just error checking. the real function starts now:"
-	d keysAndValuesDo: [ :k :v | self perform: k , ':' with: v ].
+	(self isValidParameter: aDictionary)  
+		keysAndValuesDo: [ :k :v | self perform: k , ':' with: v ].
 	^ self parameter
 ]
